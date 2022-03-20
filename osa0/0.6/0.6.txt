@@ -1,0 +1,22 @@
+
+note over selain:
+käyttäjä painaa tallenna näppäintä (onsubmit)
+end note
+
+note over selain:
+uusi note tallennetaan note listaa (notes.push(note))
+end note
+
+note over selain:
+Selain päivittää notet (redrawNotes) funktiolla.
+end note
+
+note over selain:
+Sitten se lähettää uuden noten palvelimelle (sendToServer)
+end note
+
+selain -> palvelin: HTTP POST https://studies.cs.helsinki.fi/exampleapp/new_note_spa
+
+note over palvelin:
+Lisää uuden noten palvelimelle
+end note
