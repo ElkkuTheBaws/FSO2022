@@ -4,6 +4,9 @@ import Persons from "./components/Persons";
 import Filter from "./components/Filter";
 import PersonForm from "./components/PersonForm";
 import axios from "axios";
+import personsServices from "./services/personsServices";
+import Notification from "./components/Notification";
+import './index.css'
 
 const App = () => {
 
@@ -11,14 +14,16 @@ const App = () => {
     const [newName, setNewName] = useState('')
     const [newNumber, setNewNumber] = useState('')
     const [newFilter, setNewFilter] = useState('')
+    const [notificationMessage, setNotificationMessage] = useState(null)
+    const [isError, setIsError] = useState(false)
 
     const hook = () => {
         console.log('effect')
-        axios
-            .get('http://localhost:3001/persons')
-            .then(response =>{
+        personsServices
+            .getAll()
+            .then(initialPersons =>{
                 console.log('promise fulfilled')
-                setPersons(response.data)
+                setPersons(initialPersons)
             })
     }
 
@@ -32,21 +37,42 @@ const App = () => {
             number: newNumber
         }
 
-       const canAdd =  persons.filter(person => person.name === newName).length > 0 ? false : true
-
-
+        const canAdd =  persons.filter(person => person.name === newName).length > 0 ? false : true
 
         console.log(canAdd)
 
         if(canAdd){
-            setPersons(persons.concat(personObject))
-            setNewName('')
-            setNewNumber('')
-            console.log('Button pressed ', newName)
+            personsServices
+                .create(personObject)
+                .then(returnedPerson =>{
+                    setPersons(persons.concat(returnedPerson))
+                    setNewName('')
+                    setNewNumber('')
+                    setIsError(false)
+                    setNotificationMessage(
+                        `Added ${returnedPerson.name}`
+                    )
+                    setTimeout(() => {
+                        setNotificationMessage(null)
+                    }, 5000)
+                })
+
         }else{
-            window.alert(`${newName} is already added to phonebook`)
-            setNewName('')
-            setNewNumber('')
+
+            if (window.confirm(`'${newName}' is already added to phonebook, replace the old number with new one?`)) {
+                const person = persons.find(n => n.name === newName)
+                personsServices
+                    .update(person.id, personObject)
+                    .then(updatedPerson => {
+                        hook();
+                    })
+                    .catch(error =>{
+                        setIsError(true)
+                    setNotificationMessage(`Information of ${personObject.name} has already been removed from server`)
+                    })
+                setNewName('')
+                setNewNumber('')
+            }
         }
 
     }
@@ -69,9 +95,31 @@ const App = () => {
     }
 
 
+    const toggleDeleteOf = (list, id) =>{
+        const url = `http://localhost:3001/persons/${id}`
+        const person = list.find(n => n.id === id)
+        //const deletePerson = {...person, important: !person.important}
+        console.log(id)
+
+        if (window.confirm(`Delete '${person.name}' ?`)) {
+            personsServices
+                .deletePerson(person.id)
+                .then(() => {
+                    hook();
+                    setIsError(false)
+                    setNotificationMessage(`${person.name} has been deleted`)
+                })
+                .catch(error =>{
+                    setIsError(true)
+                    setNotificationMessage(`The ${person.name} has already been removed from server`)
+                })
+        }
+    }
+
   return (
       <div>
         <h2>Phonebook</h2>
+          <Notification message={notificationMessage} isError={isError}/>
             <Filter val={newFilter}
                     onChange={handleFilterChange}
             />
@@ -85,7 +133,7 @@ const App = () => {
 
         <h2>Numbers</h2>
 
-        <Persons list={persons} filter={newFilter}/>
+        <Persons list={persons} filter={newFilter} toggleDelete ={(id) => toggleDeleteOf(persons, id)}/>
 
       </div>
   )
